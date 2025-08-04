@@ -1,4 +1,4 @@
-classdef kf < handle & matlab.mixin.Copyable
+classdef kf < handle %& matlab.mixin.Copyable
     %KF Kalman Filter
     %   Detailed explanation goes here
     

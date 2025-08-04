@@ -1,4 +1,4 @@
-classdef ekf < handle & matlab.mixin.Copyable
+classdef ekf < handle %& matlab.mixin.Copyable
     %EKF Extended Kalman Filter
     %   Detailed explanation goes here
     
