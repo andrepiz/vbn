@@ -54,23 +54,45 @@ classdef xPosVelAcc_zPos_dtVariable < kf
             % Process noise: simple model with acceleration noise
 
             % Elements for process noise covariance matrix (jerk noise model)
-            q11 = self.dt^5 / 20;
-            q12 = self.dt^4 / 8;
-            q13 = self.dt^3 / 6;
-            q22 = self.dt^3 / 3;
-            q23 = self.dt^2 / 2;
-            q33 = self.dt;
-            
-            Q_block = self.Q_scaler * [q11, q12, q13;
-                                        q12, q22, q23;
-                                        q13, q23, q33];
-            % Block diagonal Q for x,y,z axes
-            self.Q = blkdiag(Q_block, Q_block, Q_block);
+            Q11 = self.dt^5 / 20;
+            Q12 = self.dt^4 / 8;
+            Q13 = self.dt^3 / 6;
+            Q22 = self.dt^3 / 3;
+            Q23 = self.dt^2 / 2;
+            Q33 = self.dt;
+
+            Qsc = self.Q_scaler;
+            if numel(Qsc) == 1
+                self.Q = Qsc*[Q11*eye(3), Q12*eye(3), Q13*eye(3);
+                              Q12*eye(3), Q22*eye(3), Q23*eye(3);
+                              Q13*eye(3), Q23*eye(3), Q33*eye(3)];
+            elseif numel(Qsc) == 3
+                self.Q = [Qsc(1)*Q11*Qsc(1)*eye(3), Qsc(1)*Q12*Qsc(2)*eye(3), Qsc(1)*Q13*Qsc(3)*eye(3);
+                          Qsc(2)*Q12*Qsc(1)*eye(3), Qsc(2)*Q22*Qsc(2)*eye(3), Qsc(2)*Q23*Qsc(3)*eye(3);
+                          Qsc(3)*Q13*Qsc(1)*eye(3), Qsc(3)*Q23*Qsc(2)*eye(3), Qsc(3)*Q33*Qsc(3)*eye(3)];
+            elseif numel(Qsc) == 9
+                self.Q = [Qsc(1)*Q11*eye(3), Qsc(4)*Q12*eye(3), Qsc(7)*Q13*eye(3);
+                          Qsc(2)*Q12*eye(3), Qsc(5)*Q22*eye(3), Qsc(8)*Q23*eye(3);
+                          Qsc(3)*Q13*eye(3), Qsc(6)*Q23*eye(3), Qsc(9)*Q33*eye(3)];
+            else
+                error('Q_scaler should be size 1, 3, 3x3 or 9')
+            end
+
         end
 
         function self = update_R(self)
-            r_diag = self.R_scaler .* [1; 1; 1];
-            self.R = diag(r_diag);
+            % Measurement noise scaler
+
+            Rsc = self.R_scaler;
+            if numel(Rsc) == 1
+                self.R = Rsc * eye(3); 
+            elseif numel(Rsc) == 3
+                self.R = diag(Rsc);
+            elseif numel(Rsc) == 9
+                self.R = reshape(Rsc, 3, 3);
+            else
+                error('R_scaler should be size 1, 3, 3x3 or 9')
+            end
         end
 
         function self = predict_and_update(self, x_meas, dt)
