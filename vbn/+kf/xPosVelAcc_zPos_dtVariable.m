@@ -120,5 +120,15 @@ classdef xPosVelAcc_zPos_dtVariable < kf
             self.x_state = self.F * self.x_state;
             self.P = self.F * self.P * self.F' + self.Q;
         end
+
+        function [x_state, P] = propagate(self, dt)
+            % Propagate the state and covariance without setting it as a property
+            self.dt = dt;
+            self = self.update_F();
+            self = self.update_Q();
+
+            x_state = self.F * self.x_state;
+            P = self.F * self.P * self.F' + self.Q;
+        end
     end
 end
