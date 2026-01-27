@@ -13,14 +13,14 @@ classdef xPosVelAcc_zPos_dtVariable_oosm < kf
         dt
         
         % Enhanced buffer stores measurements + gains for full reprocessing
+        bufferSize = 5;  % Buffer size for OOSM history (modifiable)
         buffer = struct('x_pred', [], 'P_pred', [], 'F', [], 'Q', [], 'time', [], ...
                         'y', [], 'K', []);  % Circular buffer with measurements
-        bufferSize = 5;  % Buffer size for OOSM history (modifiable)
         bufferPointer = 0;  % Current write index
     end
     
     methods
-        function self = xPosVelAcc_zPos_dtVariable_oosm(x0, P0, dt0)
+        function self = xPosVelAcc_zPos_dtVariable_oosm(x0, P0, dt0, bufferSize)
             self.id = 0;
             self.x_state = x0;  % 9D state: position, velocity, acceleration
             self.P = P0;
@@ -30,16 +30,18 @@ classdef xPosVelAcc_zPos_dtVariable_oosm < kf
             self.H = [1 0 0 0 0 0 0 0 0;
                       0 1 0 0 0 0 0 0 0;
                       0 0 1 0 0 0 0 0 0];
-            self.R_scaler = 1.0;
-            self.Q_scaler = 1.0;
+            self.R_scaler = eye(3);
+            self.Q_scaler = eye(3);
             self = self.update_F();
             self = self.update_Q();
             self = self.update_R();
             
             % Initialize buffer with measurement history fields
+            self.bufferSize = bufferSize;
             self.buffer = repmat(struct('x_pred', zeros(9,1), 'P_pred', eye(9), ...
-                'F', eye(9), 'Q', zeros(9), 'time', 0, 'y', zeros(3,1), 'K', zeros(9,3)), ...
-                [1 self.bufferSize]);
+                                        'F', eye(9), 'Q', zeros(9), 'time', 0, 'y', zeros(3,1), 'K', zeros(9,3)), ...
+                                        [1 bufferSize]);
+            self.bufferPointer = 0;
         end
         
         function self = update_F(self)
