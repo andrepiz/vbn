@@ -112,11 +112,23 @@ classdef xPosVelAcc_zPos_dtVariable < kf
             self.P = (eye(9) - K * self.H) * self.P;
         end
 
+        function self = update_only(self, x_meas)
+            x_pred = self.x_state;
+
+            % Update
+            S = self.H * self.P * self.H' + self.R;
+            K = self.P * self.H' / S;
+            y = x_meas - self.H * x_pred;
+            self.x_state = x_pred + K * y;
+            self.P = (eye(9) - K * self.H) * self.P;
+        end
+
         function self = predict_only(self, dt)
             self.dt = dt;
             self = self.update_F();
             self = self.update_Q();
 
+            % Predict
             self.x_state = self.F * self.x_state;
             self.P = self.F * self.P * self.F' + self.Q;
         end
