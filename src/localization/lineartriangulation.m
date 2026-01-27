@@ -17,6 +17,11 @@ loses = reshape(loses, 3, []);
 rr_origin2beacons = reshape(rr_origin2beacons, 3, []);
 loses = loses./vecnorm(loses);
 
+[dim, N] = size(rr_origin2beacons);
+if N < 2
+    error('At least 2 rr_origin2beacons are required');
+end
+
 n = size(loses, 2);
 c = 0;
 H = nan(n*(n-1), n);

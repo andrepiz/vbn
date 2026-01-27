@@ -1,9 +1,6 @@
 %% VBN INSTALLATION %%
 
 % MATLAB environment
-clear
-clc
-close all
 
 if isfile("vbn_install.m")
     % SAVE INSTALL TO PATH
