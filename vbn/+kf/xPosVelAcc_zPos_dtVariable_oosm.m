@@ -67,28 +67,29 @@ classdef xPosVelAcc_zPos_dtVariable_oosm < kf
             Q22 = dt_abs^3 / 3;  Q23 = dt_abs^2 / 2; Q33 = dt_abs;
             
             Qsc = self.Q_scaler;
-            % Construct Q based on scaler size
-            if numel(Qsc) == 1
-                self.Q = Qsc * [Q11*eye(3), Q12*eye(3), Q13*eye(3);
-                                Q12*eye(3), Q22*eye(3), Q23*eye(3);
-                                Q13*eye(3), Q23*eye(3), Q33*eye(3)];
-            elseif numel(Qsc) == 3
-                self.Q = [Qsc(1)*Q11*Qsc(1)*eye(3), Qsc(1)*Q12*Qsc(2)*eye(3), Qsc(1)*Q13*Qsc(3)*eye(3);
-                           Qsc(2)*Q12*Qsc(1)*eye(3), Qsc(2)*Q22*Qsc(2)*eye(3), Qsc(2)*Q23*Qsc(3)*eye(3);
-                           Qsc(3)*Q13*Qsc(1)*eye(3), Qsc(3)*Q23*Qsc(2)*eye(3), Qsc(3)*Q33*Qsc(3)*eye(3)];
-            else
+            % % Construct Q based on scaler size
+            % if numel(Qsc) == 1
+            %     self.Q = Qsc * [Q11*eye(3), Q12*eye(3), Q13*eye(3);
+            %                     Q12*eye(3), Q22*eye(3), Q23*eye(3);
+            %                     Q13*eye(3), Q23*eye(3), Q33*eye(3)];
+            % elseif numel(Qsc) == 3
+            %     self.Q = [Qsc(1)*Q11*Qsc(1)*eye(3), Qsc(1)*Q12*Qsc(2)*eye(3), Qsc(1)*Q13*Qsc(3)*eye(3);
+            %                Qsc(2)*Q12*Qsc(1)*eye(3), Qsc(2)*Q22*Qsc(2)*eye(3), Qsc(2)*Q23*Qsc(3)*eye(3);
+            %                Qsc(3)*Q13*Qsc(1)*eye(3), Qsc(3)*Q23*Qsc(2)*eye(3), Qsc(3)*Q33*Qsc(3)*eye(3)];
+            % else
                 self.Q = [Qsc(1)*Q11*eye(3), Qsc(4)*Q12*eye(3), Qsc(7)*Q13*eye(3);
                           Qsc(2)*Q12*eye(3), Qsc(5)*Q22*eye(3), Qsc(8)*Q23*eye(3);
                           Qsc(3)*Q13*eye(3), Qsc(6)*Q23*eye(3), Qsc(9)*Q33*eye(3)];
-            end
+            % end
         end
         
         function self = update_R(self)
             Rsc = self.R_scaler;
-            if numel(Rsc) == 1;     self.R = Rsc * eye(3); 
-            elseif numel(Rsc) == 3; self.R = diag(Rsc);
-            else;                   self.R = reshape(Rsc, 3, 3);
-            end
+            % if numel(Rsc) == 1;     self.R = Rsc * eye(3); 
+            % elseif numel(Rsc) == 3; self.R = diag(Rsc);
+            % else                   
+                self.R = reshape(Rsc, 3, 3);
+            % end
         end
         
         function self = store_history(self, x_state, P, time, x_meas)
@@ -130,26 +131,32 @@ classdef xPosVelAcc_zPos_dtVariable_oosm < kf
             found = true;
         end
         
-        function indices = get_sorted_indices_after(self, t_threshold)
+        function [indices, nind] = get_sorted_indices_after(self, t_threshold)
             % Helper to get buffer indices strictly after t_threshold, sorted by time
             
-            % 1. Extract all times
-            all_times = [self.buffer.time];
-            
-            % 2. Find indices where time is strictly greater than threshold
-            valid_mask = all_times > (t_threshold + 1e-9);
-            valid_indices = find(valid_mask);
-            
-            if isempty(valid_indices)
-                indices = [];
+            % Preallocate
+            indices = zeros(1, self.bufferSize);
+            nind = 0;
+
+            % Find indices where time is strictly greater than threshold
+            for k = 1:self.bufferSize
+                tk = self.buffer(k).time;
+                if tk > t_threshold + 1e-9
+                    nind = nind + 1;
+                    indices(nind) = k;
+                end
+            end
+            if nind == 0
                 return;
             end
             
-            % 3. Sort the found indices based on their corresponding times
-            [~, sort_order] = sort(all_times(valid_indices));
-            
-            % 4. Return sorted indices
-            indices = valid_indices(sort_order)';
+            % Sort the found indices based on their corresponding times
+            times_valid = zeros(1, nind);
+            for i = 1:nind
+                times_valid(i) = self.buffer(indices(i)).time;
+            end
+            [~, sort_order] = sort(times_valid);
+            indices(1:nind) = indices(sort_order);
         end
                 
         function self = predict_and_update(self, x_meas, dt)
@@ -226,9 +233,9 @@ classdef xPosVelAcc_zPos_dtVariable_oosm < kf
             
             % 3. Re-propagate through history to Present
             % Get all subsequent measurements from buffer
-            indices = self.get_sorted_indices_after(t_oosm);
+            [indices, nind] = self.get_sorted_indices_after(t_oosm);
             
-            for k = 1:length(indices)
+            for k = 1:nind
                 idx = indices(k);
                 h_next = self.buffer(idx);
                 
